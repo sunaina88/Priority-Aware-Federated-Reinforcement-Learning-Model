@@ -150,12 +150,12 @@ To adjust the scale of experiments, edit the constants at the top of the `if __n
 After a full run, the terminal prints a results table in the format below:
 
 ```
-method               energy/task (mJ)    acc (%)   latency (ms)
------------------------------------------------------------------
-round-robin                   x.xxx        xx.x           > 200
-static priority               x.xxx        xx.x            ~150
-vanilla fedavg                    —            —      xx.x +/- x.x
-pa-fedrl (ours)               x.xxx        xx.x      xx.x +/- x.x
+method               energy/task (mJ)    acc (%)      latency (ms)
+-------------------------------------------------------------------
+round-robin                   3.962       95.0      31.9 +/- 19.7
+static priority               4.358       95.0      29.5 +/- 31.2
+vanilla fedavg                    —          —     269.2 +/- 285.2
+pa-fedrl (ours)               4.512       83.6      43.2 +/- 68.2
 ```
 
 And generates:
