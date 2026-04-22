@@ -586,6 +586,7 @@ def run_multi_seed(scenario, seeds=5, **kwargs):
         'critical_deferrals': np.concatenate(
                               [r['critical_deferrals'] for r in all_runs]),
         'latencies':  np.concatenate([r['latencies']  for r in all_runs]),
+        'fairness':   np.concatenate([r['fairness']   for r in all_runs]),
     }, last_agents
 
 
@@ -825,16 +826,3 @@ if __name__ == "__main__":
         rr_results['latencies'],
         vfed['latencies']
     )
-
-    print("\n" + "=" * 60)
-    print("done. output files:")
-    print("  figure1_battery_depletion.pdf / .png")
-    print("  figure2_cardiac_latency.pdf / .png")
-    print("=" * 60)
-    print("""
-next steps:
-  1. update table 2 in latex with printed numbers above
-  2. update jain fairness index in abstract, table 2, and scenario A paragraph
-  3. update latency numbers in scenario C paragraph and conclusion
-  4. upload figures to overleaf
-""")
