@@ -1,6 +1,6 @@
 # Priority-Aware Federated Reinforcement Learning for Adaptive Resource Allocation in Multi-Modal Medical Wearable IoT Networks
 
-**PA-FedRL** — Accepted at the 7th International Conference on Frontiers in Computing and Systems (COMSYS-2026)
+**PA-FedRL** — Our proposed work for the 7th International Conference on Frontiers in Computing and Systems (COMSYS-2026)
 
 ---
 
@@ -166,7 +166,7 @@ And generates:
 
 ## Citation
 
-If you use this code, please cite the corresponding paper once it is published through the COMSYS-2026 proceedings.
+This paper is currently under review at COMSYS-2026. If you use this code, please cite the corresponding paper once it is published through the COMSYS-2026 proceedings.
 
 ---
 
