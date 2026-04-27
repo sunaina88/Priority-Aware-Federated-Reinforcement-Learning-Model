@@ -33,16 +33,16 @@ class WearableEnv:
                                'MEDIUM': 0.4, 'LOW': 0.1}
         self.urgencies = [self.urgency_scores[p] for p in self.task_priorities]
 
-        # sampling rates in Hz (table 1 in the paper)
+        # sampling rates in Hz 
         self.sampling_rates = [2, 1, 256, 50, 0.3, 0.03, 1]
 
-        # per-task full-resolution energy costs in mJ, scaled to 10 ms timestep (section 3.3)
+        # per-task full-resolution energy costs in mJ, scaled to 10 ms timestep 
         self.energy_full = [3.5, 2.8, 12.0, 4.2, 1.2, 0.5, 3.3]
 
-        # E_max = 27.5 mJ when all tasks run at full resolution (section 3.3)
+        # E_max = 27.5 mJ when all tasks run at full resolution 
         self.E_max = sum(self.energy_full)  
 
-        # device heterogeneity: section 3.1
+        # device heterogeneity
         self.processor_speed = np.random.uniform(80, 240)  
         self.ram = np.random.uniform(256, 512)              
         self.channel_quality = np.random.uniform(0.5, 1.0)
@@ -76,7 +76,7 @@ class WearableEnv:
         self.cardiac_event_step = None
         self.cardiac_resolved_step = None
 
-        # channel quality follows bounded random walk (section 3.1)
+        # channel quality follows bounded random walk 
         self.channel_quality = np.random.uniform(0.5, 1.0)
 
         # seed the task queue with some pending tasks
@@ -87,10 +87,10 @@ class WearableEnv:
         return self._get_state()
 
     def _get_state(self):
-        # state vector: [battery, u1..u7, channel_quality, last_accuracy] (section 3.4)
+        # state vector: [battery, u1..u7, channel_quality, last_accuracy] 
         state = [self.battery] + self.urgencies + \
                 [self.channel_quality, self.last_accuracy]
-        return np.array(state, dtype=np.float32)  # shape: (10,)
+        return np.array(state, dtype=np.float32) 
 
     def _action_to_vector(self, action_idx):
         """
@@ -119,7 +119,7 @@ class WearableEnv:
 
     def step(self, action_idx):
         action = self._action_to_vector(action_idx)
-        # safety enforcement: at most one full-resolution task per timestep (section 3.4)
+        # safety enforcement: at most one full-resolution task per timestep 
         full_count = sum(1 for a in action if a == 2)
         if full_count > 1:
             first = True
@@ -147,7 +147,7 @@ class WearableEnv:
                     self.cardiac_resolved_step = self.timestep
 
             elif act == 1:
-                # we throttle: 70% accuracy, 60% of energy cost (section 3.3)
+                # we throttle: 70% accuracy, 60% of energy cost 
                 energy_this_step += 0.6 * self.energy_full[j]
                 U += 0.5 * self.urgencies[j]
                 tasks_executed.append(j)
@@ -158,7 +158,7 @@ class WearableEnv:
                 if self.urgencies[j] == 1.0:
                     L += 1
 
-        # normalised energy for reward (section 3.5)
+        # normalised energy for reward
         E = energy_this_step / self.E_max
 
         # mean accuracy across executed tasks
@@ -167,18 +167,18 @@ class WearableEnv:
         else:
             A = 0.5
 
-        # battery drain (eq. 1 in paper)
+        # battery drain 
         self.battery -= energy_this_step / self.BATTERY_CAPACITY_MJ
         self.battery = float(np.clip(self.battery, 0.0, 1.0))
 
         # exponential moving average of accuracy for state
         self.last_accuracy = 0.9 * self.last_accuracy + 0.1 * A
 
-        # channel quality bounded random walk: sigma_q = 0.05 (section 3.1)
+        # channel quality bounded random walk: sigma_q = 0.05 
         self.channel_quality = float(np.clip(
             self.channel_quality + np.random.normal(0, 0.05), 0.1, 1.0))
 
-        # update task queue
+        # we update task queue
         for j in tasks_executed:
             if j in self.task_queue:
                 self.task_queue.remove(j)
@@ -187,7 +187,7 @@ class WearableEnv:
                 self.task_queue.append(j)
         self.task_queue = self.task_queue[:10]
 
-        # priority-aware reward (eq. 2 in paper, section 3.5)
+        # priority-aware reward 
         # coefficients: alpha=0.4, beta=0.3, lambda_e=0.2, delta=0.1
         alpha, beta, lambda_e, delta = 0.4, 0.3, 0.2, 0.1
         reward = alpha * U + beta * A - lambda_e * E - delta * L
@@ -204,14 +204,11 @@ class WearableEnv:
         }
 
 
-# ============================================================================
-# part 2: dqn agent
-# ============================================================================
-
+# dqn agent
 class DQNNetwork(nn.Module):
     """
-    10 -> 64 -> 64 -> 19 fully connected network (section 3.6).
-    approx 5,952 multiply-adds per inference.
+    10 -> 64 -> 64 -> 19 fully connected network.
+    around 5,952 multiply-adds per inference.
     """
     def __init__(self, state_size=10, action_size=19):
         super().__init__()
@@ -237,7 +234,7 @@ class DQNAgent:
         self.state_size = state_size
         self.action_size = action_size
 
-        # discount factor gamma = 0.95 (section 3.6)
+        # discount factor gamma = 0.95 
         self.gamma = 0.95
 
         self.policy_net = DQNNetwork(state_size, action_size)
@@ -245,11 +242,11 @@ class DQNAgent:
                                     lr=learning_rate)
         self.loss_fn = nn.MSELoss()
 
-        # replay buffer size 10,000 (section 3.6)
+        # replay buffer size 10,000 
         self.memory = deque(maxlen=10000)
         self.batch_size = 64
 
-        # epsilon-greedy: decay from 1.0 to 0.05 (section 3.6)
+        # epsilon-greedy: decay from 1.0 to 0.05 
         self.epsilon = 1.0
         self.epsilon_min = 0.05
         self.epsilon_decay = 0.995
@@ -304,16 +301,13 @@ class DQNAgent:
             {k: v.clone() for k, v in weights.items()})
 
 
-# ============================================================================
-# part 3: federated averaging
-# ============================================================================
-
+# federated averaging
 class FederatedAggregator:
     def aggregate(self, device_weights):
         """
         uniform fedavg: theta_global = (1/N) * sum(theta_i)
         uniform averaging used deliberately to avoid biasing the global policy
-        toward devices with higher battery (section 3.7)
+        toward devices with higher battery 
         """
         avg = {}
         for key in device_weights[0].keys():
@@ -322,10 +316,7 @@ class FederatedAggregator:
         return avg
 
 
-# ============================================================================
-# part 4: pa-fedrl training
-# ============================================================================
-
+# pa-fedrl training
 def jain_fairness(values):
     """jain's fairness index: J = (sum(x_i))^2 / (N * sum(x_i^2))"""
     values = np.array(values, dtype=np.float64)
@@ -359,8 +350,8 @@ def train_pa_fedrl(num_devices=5, num_rounds=10, episodes_per_round=10,
             dev_energy_this_round = 0.0
 
             for ep in range(episodes_per_round):
-                # scenario-specific battery initialisation (section 4.2)
-                # battery stress: 6-14% remaining, matching figure 1 y-axis
+                # scenario-specific battery initialisation
+                # battery stress: 6-14% remaining
                 if scenario == 'battery_stress':
                     state = env.reset(battery_override=np.random.uniform(0.06, 0.14))
                 else:
@@ -396,7 +387,7 @@ def train_pa_fedrl(num_devices=5, num_rounds=10, episodes_per_round=10,
                 dev_energy_this_round += env.total_energy_consumed
 
                 # cardiac latency: steps from event injection to ECG full-resolution execution
-                # each step = 10 ms (section 3.3)
+                # each step = 10 ms 
                 if env.cardiac_event_step is not None \
                         and env.cardiac_resolved_step is not None:
                     latency_steps = (env.cardiac_resolved_step
@@ -410,7 +401,7 @@ def train_pa_fedrl(num_devices=5, num_rounds=10, episodes_per_round=10,
         # jain fairness index over per-device energy consumption this round
         all_fairness.append(jain_fairness(round_energies))
 
-        # fedavg aggregation every K=10 episodes (section 3.7)
+        # fedavg aggregation every K=10 episodes 
         global_weights = aggregator.aggregate(device_weights)
         for agent in agents:
             agent.set_weights(global_weights)
@@ -421,14 +412,11 @@ def train_pa_fedrl(num_devices=5, num_rounds=10, episodes_per_round=10,
         'accuracies':         all_accuracies,
         'critical_deferrals': all_critical_deferrals,
         'latencies':          all_latencies,
-        'fairness':           all_fairness,  # list of per-round jain index values
+        'fairness':           all_fairness, 
     }, agents
 
 
-# ============================================================================
-# part 5: baselines
-# ============================================================================
-
+# baselines
 def run_round_robin(steps=200, battery_override=None,
                     inject_cardiac=False, cardiac_window=(50, 150)):
     """round-robin: cycles through all 7 tasks in fixed order."""
@@ -476,7 +464,7 @@ def run_static_priority(steps=200, battery_override=None,
             env.inject_cardiac_event(step)
             cardiac_injected = True
 
-        # fixed hierarchy: pick lowest-index (highest-priority) queued task
+        # fixed hierarchy: we pick the lowest-index (highest-priority) queued task
         action = 0
         for task_idx in range(7):
             if task_idx in env.task_queue:
@@ -500,7 +488,7 @@ def run_vanilla_fed(num_devices=5, num_rounds=10,
     """
     vanilla fedavg (v-fed): identical to pa-fedrl but with alpha=0, delta=0.
     reward uses only accuracy and energy — no urgency weighting, no critical penalty.
-    this isolates the contribution of the priority-aware reward (section 4, ablation).
+    this isolates the contribution of the priority-aware reward.
     """
     np.random.seed(seed)
     random.seed(seed)
@@ -562,10 +550,7 @@ def run_vanilla_fed(num_devices=5, num_rounds=10,
     }
 
 
-# ============================================================================
-# part 6: multi-seed runner
-# ============================================================================
-
+# multi-seed runner
 def run_multi_seed(scenario, seeds=5, **kwargs):
     """
     run training across multiple seeds and concatenate metrics.
@@ -577,7 +562,7 @@ def run_multi_seed(scenario, seeds=5, **kwargs):
     for s in range(seeds):
         metrics, agents = train_pa_fedrl(scenario=scenario, seed=s, **kwargs)
         all_runs.append(metrics)
-        last_agents = agents  # keep agents from last seed for figure generation
+        last_agents = agents  # we keep agents from last seed for figure generation
 
     return {
         'rewards':    np.concatenate([r['rewards']    for r in all_runs]),
@@ -590,13 +575,10 @@ def run_multi_seed(scenario, seeds=5, **kwargs):
     }, last_agents
 
 
-# ============================================================================
-# part 7: figure generation
-# ============================================================================
-
+# generating figures
 def generate_figure1(pa_battery, sp_battery, rr_battery):
     """
-    figure 1: battery depletion under stress (scenario B).
+    figure 2: battery depletion under stress (scenario B).
     pa-fedrl trace uses the trained agent; baselines use their own runners.
     """
     max_len = max(len(pa_battery), len(sp_battery), len(rr_battery))
@@ -630,8 +612,8 @@ def generate_figure1(pa_battery, sp_battery, rr_battery):
 
 def generate_figure2(pa_latencies, sp_latencies, rr_latencies, vfed_latencies):
     """
-    figure 2: cardiac event re-prioritisation latency bar chart (scenario C).
-    all four bars are now measured from actual simulation runs — no hardcoded fallbacks.
+    figure 3: cardiac event re-prioritisation latency bar chart (scenario C).
+    all four bars are now measured from actual simulation runs and there are no hardcoded fallbacks.
     """
     def safe_mean(lst): return float(np.mean(lst)) if len(lst) > 0 else 0.0
     def safe_std(lst):  return float(np.std(lst))  if len(lst) > 0 else 0.0
@@ -665,49 +647,44 @@ def generate_figure2(pa_latencies, sp_latencies, rr_latencies, vfed_latencies):
     print("saved: figure2_cardiac_latency.pdf/.png")
 
 
-# ============================================================================
-# part 8: main
-# ============================================================================
-
+# main
 if __name__ == "__main__":
-    print("=" * 60)
-    print("PA-FedRL simulation")
-    print("=" * 60)
+    print("PA-FedRL simulation starting...")
 
     NUM_DEVICES        = 5
     NUM_ROUNDS         = 10
     EPISODES_PER_ROUND = 10
     NUM_SEEDS          = 5
 
-    # --- scenario A: normal operation ---
-    print("\n[1/4] scenario A — normal operation")
+    # scenario A: normal operation
+    print("\nscenario A — normal operation")
     res_normal, _ = run_multi_seed('normal', seeds=NUM_SEEDS,
                                    num_devices=NUM_DEVICES,
                                    num_rounds=NUM_ROUNDS,
                                    episodes_per_round=EPISODES_PER_ROUND)
 
-    # --- scenario B: battery stress (6-14% remaining, matches figure 1 y-axis) ---
-    print("\n[2/4] scenario B — battery stress")
+    # scenario B: battery stress 
+    print("\nscenario B — battery stress")
     res_stress, stress_agents = run_multi_seed('battery_stress', seeds=NUM_SEEDS,
                                                num_devices=NUM_DEVICES,
                                                num_rounds=NUM_ROUNDS,
                                                episodes_per_round=EPISODES_PER_ROUND)
 
-    # --- scenario C: cardiac event ---
-    print("\n[3/4] scenario C — cardiac event pre-emption")
+    # scenario C: cardiac event
+    print("\nscenario C — cardiac event pre-emption")
     res_cardiac, _ = run_multi_seed('cardiac_event', seeds=NUM_SEEDS,
                                     num_devices=NUM_DEVICES,
                                     num_rounds=NUM_ROUNDS,
                                     episodes_per_round=EPISODES_PER_ROUND)
 
-    # --- vanilla fedavg ablation baseline ---
-    print("\n[4/4] vanilla fedavg (ablation baseline)")
+    # vanilla fedavg ablation baseline
+    print("\nvanilla fedavg (ablation baseline)")
     vfed = run_vanilla_fed(num_devices=NUM_DEVICES,
                            num_rounds=NUM_ROUNDS,
                            episodes_per_round=EPISODES_PER_ROUND,
                            seed=0)
 
-    # --- rule-based baselines (100 episodes each) ---
+    # rule-based baselines (100 episodes each)
     print("\nrunning rule-based baselines (100 episodes each)...")
     rr_results = {'energy': [], 'accuracy': [], 'deferrals': [],
                   'battery': None, 'latencies': []}
@@ -733,17 +710,17 @@ if __name__ == "__main__":
         if lat is not None:
             sp_results['latencies'].append(lat)
 
-    # --- battery stress traces for figure 1 ---
+    # battery stress traces for figure 1
     # baselines run at 6-14% battery to match scenario B
     _, _, _, rr_battery_trace, _ = run_round_robin(
         steps=200, battery_override=np.random.uniform(0.06, 0.14))
     _, _, _, sp_battery_trace, _ = run_static_priority(
         steps=200, battery_override=np.random.uniform(0.06, 0.14))
 
-    # pa-fedrl battery trace: use a trained agent from scenario B (not a fresh random one)
+    # pa-fedrl battery trace: we use a trained agent from scenario B (not a fresh random one)
     pa_env = WearableEnv()
     pa_battery_trace = []
-    trained_agent = stress_agents[0]  # use first trained agent from scenario B
+    trained_agent = stress_agents[0]  # we use first trained agent from scenario B
     state = pa_env.reset(battery_override=np.random.uniform(0.06, 0.14))
     for step in range(200):
         action = trained_agent.act(state)
@@ -752,71 +729,62 @@ if __name__ == "__main__":
         if done:
             break
 
-    # ============================================================================
-    # print results table
-    # ============================================================================
-    print("\n" + "=" * 60)
-    print("results summary")
-    print("=" * 60)
+    # displaying results
+    print("\nResults Summary: \n")
 
     pa_energy_per_task = np.mean(res_normal['energies']) / 200
     rr_energy_per_task = np.mean(rr_results['energy']) / 200
     sp_energy_per_task = np.mean(sp_results['energy']) / 200
 
-    print("\ntable 2 — scenario A (normal operation)")
-    print(f"{'method':<20} {'energy/task (mJ)':>18} {'acc (%)':>10} {'latency (ms)':>15} {'fairness':>10}")
-    print("-" * 78)
-    print(f"{'round-robin':<20} {rr_energy_per_task:>18.3f} "
+    print("\nTable: Scenario A (normal operation)")
+    print(f"{'Method':<20} {'Energy/Task (mJ)':>18} {'Acc (%)':>10} {'Latency (ms)':>15} {'Fairness':>10}")
+    print("\n")
+    print(f"{'Round-Robin':<20} {rr_energy_per_task:>18.3f} "
           f"{np.mean(rr_results['accuracy'])*100:>10.1f} {'> 200':>15} {'—':>10}")
-    print(f"{'static priority':<20} {sp_energy_per_task:>18.3f} "
+    print(f"{'Static Priority':<20} {sp_energy_per_task:>18.3f} "
           f"{np.mean(sp_results['accuracy'])*100:>10.1f} {'~150':>15} {'—':>10}")
 
     if len(vfed['latencies']) > 0:
-        print(f"{'vanilla fedavg':<20} {'—':>18} {'—':>10} "
+        print(f"{'Vanilla Fedavg':<20} {'—':>18} {'—':>10} "
               f"{np.mean(vfed['latencies']):.1f} +/- {np.std(vfed['latencies']):.1f}{'—':>10}")
     else:
-        print(f"{'vanilla fedavg':<20} {'—':>18} {'—':>10} {'no events captured':>15} {'—':>10}")
+        print(f"{'Vanilla Fedavg':<20} {'—':>18} {'—':>10} {'No events captured':>15} {'—':>10}")
 
     pa_fairness_mean = np.mean(res_normal['fairness'])
     pa_fairness_std  = np.std(res_normal['fairness'])
     if len(res_cardiac['latencies']) > 0:
-        print(f"{'pa-fedrl (ours)':<20} {pa_energy_per_task:>18.3f} "
+        print(f"{'PA-FedRL (ours)':<20} {pa_energy_per_task:>18.3f} "
               f"{np.mean(res_normal['accuracies'])*100:>10.1f} "
               f"{np.mean(res_cardiac['latencies']):.1f} +/- "
               f"{np.std(res_cardiac['latencies']):.1f} "
               f"{pa_fairness_mean:>10.3f}")
     else:
-        print(f"{'pa-fedrl (ours)':<20} {pa_energy_per_task:>18.3f} "
+        print(f"{'PA-FedRL (ours)':<20} {pa_energy_per_task:>18.3f} "
               f"{np.mean(res_normal['accuracies'])*100:>10.1f} "
-              f"{'no events captured':>15} {pa_fairness_mean:>10.3f}")
+              f"{'No events captured':>15} {pa_fairness_mean:>10.3f}")
 
-    print(f"\njain fairness index (pa-fedrl, normal operation):")
-    print(f"  mean: {pa_fairness_mean:.3f}  std: {pa_fairness_std:.3f}")
-    print(f"  per-round values: {[round(f, 3) for f in res_normal['fairness']]}")
+    print(f"\nJain fairness index (PA-FedRL, normal operation):")
+    print(f"  Mean: {pa_fairness_mean:.3f}  std: {pa_fairness_std:.3f}")
+    print(f"  Per-round values: {[round(f, 3) for f in res_normal['fairness']]}")
 
-    print("\nscenario B — reward under battery stress vs normal:")
-    print(f"  normal:  {np.mean(res_normal['rewards']):.2f} "
+    print("\nScenario B — reward under battery stress vs normal:")
+    print(f"  Normal:  {np.mean(res_normal['rewards']):.2f} "
           f"+/- {np.std(res_normal['rewards']):.2f}")
-    print(f"  stress:  {np.mean(res_stress['rewards']):.2f} "
+    print(f"  Stress:  {np.mean(res_stress['rewards']):.2f} "
           f"+/- {np.std(res_stress['rewards']):.2f}")
 
-    print("\nablation — critical deferrals per episode:")
-    print(f"  pa-fedrl (full):        {np.mean(res_normal['critical_deferrals']):.1f}")
-    print(f"  v-fed (no alpha/delta): {np.mean(vfed['critical_deferrals']):.1f}")
+    print("\nAblation — critical deferrals per episode:")
+    print(f"  PA-FedRL (full):        {np.mean(res_normal['critical_deferrals']):.1f}")
+    print(f"  V-Fed (no alpha/delta): {np.mean(vfed['critical_deferrals']):.1f}")
 
     if len(rr_results['latencies']) > 0:
-        print(f"\nround-robin cardiac latency (ms): "
+        print(f"\nRound-Robin cardiac latency (ms): "
               f"{np.mean(rr_results['latencies']):.1f} "
               f"+/- {np.std(rr_results['latencies']):.1f}")
     if len(sp_results['latencies']) > 0:
-        print(f"static priority cardiac latency (ms): "
+        print(f"Static Priority cardiac latency (ms): "
               f"{np.mean(sp_results['latencies']):.1f} "
               f"+/- {np.std(sp_results['latencies']):.1f}")
-
-    # ============================================================================
-    # generate figures
-    # ============================================================================
-    print("\ngenerating figures...")
 
     generate_figure1(pa_battery_trace, sp_battery_trace, rr_battery_trace)
 
