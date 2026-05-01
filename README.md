@@ -1,6 +1,6 @@
 # Priority-Aware Federated Reinforcement Learning for Adaptive Resource Allocation in Multi-Modal Medical Wearable IoT Networks
 
-**PA-FedRL** — Our proposed work for the 2026 International Conference on Advanced Materials for Sustainable Clean Energy and Healthcare Technology
+**PA-FedRL** — Our proposed work for the 2026 International Conference on Advanced Materials for Sustainable Clean Energy and Healthcare Technologies
 
 ---
 
