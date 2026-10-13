@@ -1,6 +1,6 @@
 # Priority-Aware Federated Reinforcement Learning for Adaptive Resource Allocation in Multi-Modal Medical Wearable IoT Networks
 
-**PA-FedRL** — Our proposed work for the 2026 International Conference on Advanced Materials for Sustainable Clean Energy and Healthcare Technologies
+**PA-FedRL** — Our proposed work for the 2nd International Conference for Artificial Intelligence And Emerging Technologies (ICAIET) - 2027, XIM University
 
 ---
 
@@ -166,7 +166,7 @@ And generates:
 
 ## Citation
 
-This paper is currently under review at the 2026 International Conference on Advanced Materials for Sustainable Clean Energy and Healthcare Technologies. If you use this code, please cite the corresponding paper once it is published through the conference proceedings.
+This paper is currently under review at the ICAIET-2027. If you use this code, please cite the corresponding paper once it is published through the conference proceedings.
 
 ---
 
